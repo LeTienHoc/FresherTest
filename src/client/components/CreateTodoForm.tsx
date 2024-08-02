@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 
 import { api } from '@/utils/client/api'
 
@@ -34,9 +34,18 @@ export const CreateTodoForm = () => {
         apiContext.todo.getAll.refetch()
       },
     })
-
+  const Submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    createTodo({
+      body: todoBody,
+    })
+    setTodoBody('')
+  }
   return (
-    <form className="group flex items-center justify-between rounded-12 border border-gray-200 py-2 pr-4 focus-within:border-gray-400">
+    <form
+      onSubmit={Submit}
+      className="group flex items-center justify-between rounded-12 border border-gray-200 py-2 pr-4 focus-within:border-gray-400"
+    >
       <label htmlFor={TODO_INPUT_ID} className="sr-only">
         Add todo
       </label>
@@ -53,6 +62,7 @@ export const CreateTodoForm = () => {
       />
 
       <button
+        className="rounded-full bg-gray-700 px-5 py-2 text-white"
         type="button"
         disabled={isCreatingTodo}
         onClick={() => {

@@ -1,9 +1,9 @@
-import type { SVGProps } from 'react'
-
+import { type SVGProps } from 'react'
 import * as Checkbox from '@radix-ui/react-checkbox'
+import * as Tabs from '@radix-ui/react-tabs'
+import { useAutoAnimate } from '@formkit/auto-animate/react'
 
 import { api } from '@/utils/client/api'
-
 /**
  * QUESTION 3:
  * -----------
@@ -62,33 +62,198 @@ import { api } from '@/utils/client/api'
  * Documentation references:
  *  - https://auto-animate.formkit.com
  */
-
 export const TodoList = () => {
+  type TrangThai = 'pending' | 'completed'
   const { data: todos = [] } = api.todo.getAll.useQuery({
     statuses: ['completed', 'pending'],
   })
-
+  const { data: pendings = [] } = api.todo.getAll.useQuery({
+    statuses: ['pending'],
+  })
+  const { data: completed = [] } = api.todo.getAll.useQuery({
+    statuses: ['completed'],
+  })
+  const handleCheckBox = (status: string) => {
+    if (status === 'completed') {
+      return true
+    }
+    return false
+  }
+  const apiContext = api.useContext()
+  const { mutate: updateTodo } = api.todoStatus.update.useMutation({
+    onSuccess: () => {
+      apiContext.todo.getAll.refetch()
+    },
+  })
+  const { mutate: deleteTodo } = api.todo.delete.useMutation({
+    onSuccess: () => {
+      apiContext.todo.getAll.refetch()
+    },
+  })
+  const [parent] = useAutoAnimate()
+  const CheckedStatus = (status: string, id: number) => {
+    let checkStatus: TrangThai = 'pending'
+    if (status === 'pending') {
+      checkStatus = 'completed'
+    }
+    updateTodo({
+      todoId: id,
+      status: checkStatus,
+    })
+  }
+  const ActiveCss = (status: string, css: string) => {
+    if (status === 'completed') {
+      return css
+    }
+    return ''
+  }
   return (
-    <ul className="grid grid-cols-1 gap-y-3">
-      {todos.map((todo) => (
-        <li key={todo.id}>
-          <div className="flex items-center rounded-12 border border-gray-200 px-4 py-3 shadow-sm">
-            <Checkbox.Root
-              id={String(todo.id)}
-              className="flex h-6 w-6 items-center justify-center rounded-6 border border-gray-300 focus:border-gray-700 focus:outline-none data-[state=checked]:border-gray-700 data-[state=checked]:bg-gray-700"
-            >
-              <Checkbox.Indicator>
-                <CheckIcon className="h-4 w-4 text-white" />
-              </Checkbox.Indicator>
-            </Checkbox.Root>
+    <Tabs.Root defaultValue="tab1" orientation="vertical">
+      <Tabs.List
+        aria-label="tabs example"
+        className="mb-4 flex items-center justify-start gap-2"
+      >
+        <Tabs.Trigger
+          className="text-gray-700 rounded-full border border-gray-200 px-6 py-3 data-[state=active]:bg-gray-700 data-[state=active]:text-white"
+          value="tab1"
+        >
+          All
+        </Tabs.Trigger>
+        <Tabs.Trigger
+          className="text-gray-700 rounded-full border border-gray-200 px-6 py-3 data-[state=active]:bg-gray-700 data-[state=active]:text-white"
+          value="tab2"
+        >
+          Pending
+        </Tabs.Trigger>
+        <Tabs.Trigger
+          className="text-gray-700 rounded-full border border-gray-200 px-6 py-3 data-[state=active]:bg-gray-700 data-[state=active]:text-white"
+          value="tab3"
+        >
+          Completed
+        </Tabs.Trigger>
+      </Tabs.List>
+      <Tabs.Content value="tab1">
+        <ul className="grid grid-cols-1 gap-y-3" ref={parent}>
+          {todos.map((todo) => (
+            <li key={todo.id}>
+              <div
+                className={`flex items-center rounded-12 border border-gray-200 px-4 py-3 shadow-sm 
+                            ${ActiveCss(todo.status, 'bg-gray-50')}`}
+              >
+                <Checkbox.Root
+                  id={String(todo.id)}
+                  className="flex h-6 w-6 items-center justify-center rounded-6 border border-gray-300 focus:border-gray-700 focus:outline-none data-[state=checked]:border-gray-700 data-[state=checked]:bg-gray-700"
+                  checked={handleCheckBox(todo.status)}
+                  onCheckedChange={() => {
+                    CheckedStatus(todo.status, todo.id)
+                  }}
+                >
+                  <Checkbox.Indicator>
+                    <CheckIcon className="h-4 w-4 text-white" />
+                  </Checkbox.Indicator>
+                </Checkbox.Root>
 
-            <label className="block pl-3 font-medium" htmlFor={String(todo.id)}>
-              {todo.body}
-            </label>
-          </div>
-        </li>
-      ))}
-    </ul>
+                <label
+                  className={`block pl-3 text-base font-medium 
+                                  ${ActiveCss(
+                                    todo.status,
+                                    'text-gray-500 line-through'
+                                  )}`}
+                  htmlFor={String(todo.id)}
+                >
+                  {todo.body}
+                </label>
+                <button
+                  className="ml-auto"
+                  onClick={() => {
+                    deleteTodo({ id: todo.id })
+                  }}
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Tabs.Content>
+      <Tabs.Content value="tab2">
+        <ul className="grid grid-cols-1 gap-y-3" ref={parent}>
+          {pendings.map((pending) => (
+            <li key={pending.id}>
+              <div
+                className={`shadow-sm} flex items-center rounded-12 border border-gray-200 px-4 py-3`}
+              >
+                <Checkbox.Root
+                  id={String(pending.id)}
+                  className="flex h-6 w-6 items-center justify-center rounded-6 border border-gray-300 focus:border-gray-700 focus:outline-none"
+                  onCheckedChange={() => {
+                    CheckedStatus(pending.status, pending.id)
+                  }}
+                >
+                  <Checkbox.Indicator>
+                    <CheckIcon className="h-4 w-4 text-white" />
+                  </Checkbox.Indicator>
+                </Checkbox.Root>
+
+                <label
+                  className={`text-base} block pl-3 font-medium`}
+                  htmlFor={String(pending.id)}
+                >
+                  {pending.body}
+                </label>
+                <button
+                  className="ml-auto"
+                  onClick={() => {
+                    deleteTodo({ id: pending.id })
+                  }}
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Tabs.Content>
+      <Tabs.Content value="tab3">
+        <ul className="grid grid-cols-1 gap-y-3" ref={parent}>
+          {completed.map((complete) => (
+            <li key={complete.id}>
+              <div
+                className={`bg-gray-50} flex items-center rounded-12 border border-gray-200 px-4 py-3 shadow-sm`}
+              >
+                <Checkbox.Root
+                  id={String(complete.id)}
+                  className="flex h-6 w-6 items-center justify-center rounded-6 border border-gray-300 focus:border-gray-700 focus:outline-none data-[state=checked]:border-gray-700 data-[state=checked]:bg-gray-700"
+                  checked={true}
+                  onCheckedChange={() => {
+                    CheckedStatus(complete.status, complete.id)
+                  }}
+                >
+                  <Checkbox.Indicator>
+                    <CheckIcon className="h-4 w-4 text-white" />
+                  </Checkbox.Indicator>
+                </Checkbox.Root>
+
+                <label
+                  className={`block pl-3 text-base font-medium text-gray-500 line-through`}
+                  htmlFor={String(complete.id)}
+                >
+                  {complete.body}
+                </label>
+                <button
+                  className="ml-auto"
+                  onClick={() => {
+                    deleteTodo({ id: complete.id })
+                  }}
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Tabs.Content>
+    </Tabs.Root>
   )
 }
 
